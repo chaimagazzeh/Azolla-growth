@@ -1,35 +1,39 @@
 ---
 name: Modeling Architecture Decisions
-description: Agreed modeling framings, validation strategies, and what to avoid
+description: Final confirmed modeling framings, features, validation, and exclusions
 type: project
 ---
 
-**Framing 1 — Pre-experiment prediction (n=24)**
-- Features: medium elemental composition (P, K, N, Mg, Fe mmol/L) + initial_biomass + light_lux
-- Target: final_biomass_g (and RGR = ln(B21/B0)/21)
-- Models: Linear Regression, Ridge, RF (max_depth=3), XGBoost
-- Validation: LOOCV (leave-one-bac-out)
-- SHAP on best model
+**Experiment design (actual v2 data):** 24 bacs, UNBALANCED: 3 NPK + 7 IRR2 + 7 Yoshida + 7 Modified Hoagland. No témoin in v2. Bac identity = Medium + Table + Bac number (Bac repeats across Tables).
+- Light (LUX) is per Table: Table 1 = 1141, Table 2 = 834, Table 3 = 727
+- Initial biomass M0 = constant 36 g ± 2g for all bacs (no per-bac M0)
+- "Biomasse finale" = last-day biomass (the pasted date is wrong/irrelevant)
+- Experiment start = 2026-05-11 (Day 0)
 
-**Framing 2 — In-experiment adaptive prediction (24 bacs × 5 T-values = 120 rows)**
-- For each bac at checkpoint T ∈ {3,7,10,14,17}: cumulative trajectory summaries as features
-- Features: {medium_composition, initial_biomass, light_lux, days_elapsed, mean_pH_0_T, std_pH_0_T, delta_pH, pH_slope, mean_EC_0_T, EC_slope, GDD, correction_count}
-- Target: final_biomass_day21
-- Validation: Leave-One-Bac-Out CV (LOBOCV) — all T-values of same bac must be held out together
-- Key output: R²(T) vs T prediction horizon curve
+**Framing 1 — Pre-experimental prediction (n=24, IMPLEMENTING)**
+- Target: final biomass M21 (g). TCR = ln(M21/36)/t is a monotonic transform of M21 since M0 constant — report both but they rank identically.
+- Features: medium elemental composition (from medium_composition sheet, pending), light_lux (by Table), pH_mean per bac
+- Models: Linear Regression, Ridge, Random Forest (max_depth=2, min_samples_leaf=3), XGBoost
+- Validation: LOOCV — metrics: RMSE, MAE, R²
+- Interpretability: SHAP / feature importance on best model
+- CAVEAT: only 4 distinct medium compositions → model learns ~4 group means, not a continuous relationship. Position SHAP as exploratory.
 
-**IMPORTANT — what NOT to do:**
-- Do NOT use temporal train/test split within same bacs (that's what CLAUDE.md originally said — it's wrong)
-- Do NOT treat daily rows as independent observations (pseudoreplication)
-- Do NOT fit logistic curves (only 2 anchor points per bac)
-- Do NOT aggregate → 24 rows for ML (wastes temporal structure)
-- TDS and Salinity are redundant with EC — drop them
+**Framing 2 — DROPPED from implementation.**
+- Reason: EC data is single-timepoint per bac (no time series, no day column in old dataset). Cannot fit CE(t)=CE₀·e^(−kt) — k undefined with one point.
+- Old dataset has 28 EC values but ~1 per bac, plus broken mapping (Medium+Replicate vs Medium+Table+Bac).
+- KEEP Approach 2 in thesis as PROPOSED methodology / future work only — needs denser EC sampling for empirical validation.
 
-**Framing 3 (recommended addition):**
-- Correlation + partial correlation of environmental features vs. final_biomass
-- Identifies which factors drive yield — most publishable analysis at n=24
+**Excluded features (document in results):**
+- Humidity: room-level constant, zero variance across bacs
+- TDS / Salinity: collinear with EC, redundant
+- Photoperiod: constant across all bacs and days
 
-**Statistical analysis (biological results chapter):**
-- Type III SS ANOVA for unbalanced design (3 NPK, 7×3 others)
-- Tukey HSD post-hoc
-- Libraries: pingouin or statsmodels
+**Statistical analyses:**
+- One-way ANOVA (Type III SS — unbalanced design) on biomass and chlorophyll across 4 mediums
+- Post-hoc Tukey HSD, effect size η²
+- Libraries: pingouin, statsmodels, scikit-learn, shap, xgboost, scipy
+
+**What NOT to do:**
+- Do NOT treat daily pH rows as independent observations (pseudoreplication) — aggregate to per-bac
+- Do NOT use humidity, TDS, salinity, photoperiod as features
+- Do NOT overstate Framing 1 predictive power (only 4 distinct feature profiles)

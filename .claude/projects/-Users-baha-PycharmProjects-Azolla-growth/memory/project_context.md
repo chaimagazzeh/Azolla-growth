@@ -1,21 +1,28 @@
 ---
 name: Azolla Thesis Project Context
-description: Core facts about the Azolla pinnata experiment and thesis scope
+description: Core facts about the Azolla pinnata experiment, submitted thesis, and implementation scope
 type: project
 ---
 
-Master's thesis: data-driven system to monitor and predict Azolla pinnata biomass production in controlled conditions (Tunisian climate simulation). Submission deadline: 2026-06-10.
+Master's thesis submitted 2026-06-10. Now implementing the Python code to produce the results described in the thesis.
 
-**Experiment:** 24 bacs (3 NPK, 7 IRR2, 7 Yoshida, 7 Modified Hoagland) + 6 phytotron bacs testing light intensity. Daily measurements: pH (3 spatial points), EC (every 3 days, interpolated), temperature, humidity. Biomass only at Day 0 and Day 21 — this is the central constraint.
+**Experiment:** 20 bacs, balanced design: 4 Témoin (distilled water) + 4 NPK + 4 IRR2 + 4 Yoshida + 4 Modified Hoagland. Plus 6 phytotron bacs (analyzed separately).
+**n=20, balanced** — ANOVA is simpler (Type I = Type III SS for balanced design).
+Biomass measured only at Day 0 (M0) and Day 21 (M21). EC measured every 3 days. pH measured daily (3 spatial points per bac).
 
 **Key data files:**
-- `data/dataset azolla.xlsx` — raw pH/EC data (183 rows, no day column yet, no biomass yet)
-- `data/Chlorophyll+ Carotenoid abs azolla.xlsx` — chlorophyll/carotenoid values for 30 samples (samples 1-30, all calculated)
+- `data/dataset azolla.xlsx` — raw pH/EC measurements
+- `data/Chlorophyll+ Carotenoid abs azolla.xlsx` — 30 samples (samples 1–30) with Chl a, Chl b, Total Chl, Carotenoids
+- User will add bac_summary and ec_timeseries sheets — see dataset_spec.md
 
-**Critical biological findings:**
-- Chl a/b ratio in actual data is 4-6 (NOT ~2.0 as stated in previous conversation's summary) — indicates stress (suboptimal humidity 40%, P-limitation in IRR2, high EC in Hoagland)
-- pH acidified over time (not alkalized) — NH4+ uptake drives it — valid IoT proxy for metabolic activity
-- Pink fronds in IRR2 = anthocyanin = P-deficiency stress
+**EC depletion threshold (established from data):**
+- IRR2 bac: CE dropped from 666 µS/cm → 258 µS/cm before frond reddening appeared
+- P_déplétion = 61% → seuil = 0.39 (fraction remaining, NOT 39)
+- Alert formula: t* = −ln(0.39)/k = 0.942/k days
+
+**Key biological findings:**
+- Chl a/b ratio 4–6 across all samples (stress indicator — suboptimal humidity 40%, P-limitation IRR2, high EC Hoagland)
+- pH acidified over time (NH4+ uptake) — valid IoT monitoring proxy
+- Pink/red fronds in IRR2 = anthocyanin = phosphorus deficiency
 - Optimal light ~800 lux, photoinhibition > 1400 lux
-
-**Why:** Thesis is about demonstrating a data-driven smart agriculture monitoring methodology, not building a production system. ML is positioned as proof-of-concept validated on experimental data.
+- EC depletion only observable in dilute media (IRR2, NPK) — k≈0 for Yoshida/Hoagland by design (high CE₀)
