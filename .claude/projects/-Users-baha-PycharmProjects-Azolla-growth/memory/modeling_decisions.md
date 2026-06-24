@@ -4,19 +4,20 @@ description: Final confirmed modeling framings, features, validation, and exclus
 type: project
 ---
 
-**Experiment design (actual v2 data):** 24 bacs, UNBALANCED: 3 NPK + 7 IRR2 + 7 Yoshida + 7 Modified Hoagland. No témoin in v2. Bac identity = Medium + Table + Bac number (Bac repeats across Tables).
-- Light (LUX) is per Table: Table 1 = 1141, Table 2 = 834, Table 3 = 727
-- Initial biomass M0 = constant 36 g ± 2g for all bacs (no per-bac M0)
-- "Biomasse finale" = last-day biomass (the pasted date is wrong/irrelevant)
-- Experiment start = 2026-05-11 (Day 0)
+**Experiment design (v3 data — current source of truth):** `dataset azolla_v3.xlsx`, sheet `Feuil2` (3rd sheet) is the most complete. 24 bacs UNBALANCED (3 NPK + 7 IRR2 + 7 Yoshida + 7 Modified Hoagland), reduced to **n=20** for consistency with biochemical set. Bac identity = Medium + Bloc + Bac (Bloc replaces Table).
+- Light (LUX) per Bloc: 1=1141, 2=834, 3=727
+- M0 (biomasse_initiale_g) is REAL and VARIES per bac (33–39 g) in v3 — not constant
+- v3 Feuil2 has per-row nutrient columns (N,P,K,Ca,Mg,Fe,Mn,Mo,B,Cu,Zn,Co); composition extracted into data/medium_composition.csv
+- tmp_and_humidity.txt = single room sensor, aggregated to daily means (temp≈23°C, humidity≈64%)
 
-**Framing 1 — Pre-experimental prediction (n=24, IMPLEMENTING)**
-- Target: final biomass M21 (g). TCR = ln(M21/36)/t is a monotonic transform of M21 since M0 constant — report both but they rank identically.
-- Features: medium elemental composition (from medium_composition sheet, pending), light_lux (by Table), pH_mean per bac
-- Models: Linear Regression, Ridge, Random Forest (max_depth=2, min_samples_leaf=3), XGBoost
-- Validation: LOOCV — metrics: RMSE, MAE, R²
-- Interpretability: SHAP / feature importance on best model
-- CAVEAT: only 4 distinct medium compositions → model learns ~4 group means, not a continuous relationship. Position SHAP as exploratory.
+**n=20 drop rule (RANDOM_STATE=42, reproducible):** drop IRR2_Bloc1_B4 (incomplete pH 12/18) + 3 random from over-represented media (Yoshida_Bloc2_B1, IRR2_Bloc1_B2, Yoshida_Bloc2_B2), NPK control untouched. Final: NPK=3, IRR2=5, Yoshida=5, Hoagland=7.
+
+**Framing 1 — Pre-experimental TCR prediction (n=20, IMPLEMENTED & RUN)**
+- Target: TCR = ln(M21/M0)/21 (Hunt 1982)
+- Features: 12 elemental concentrations (CSV) + light_lux + pH_mean + M0 + temp_mean + humidity_mean
+- Models: Linear, Ridge, RF (max_depth=2, min_samples_leaf=3), XGBoost. Validation LOOCV, metrics RMSE+MAE (R² removed per thesis)
+- RESULTS: RF best RMSE 0.0044 vs baseline 0.0088
+- CRITICAL CAVEAT: M0 dominates importance because it's IN the TCR formula (TCR=(lnM21-lnM0)/t). Not leakage (M0 known pre-experiment) but partly mechanical. Other features (composition, light, pH) contribute little. temp/humidity importance=0 (zero variance, room sensor).
 
 **Framing 2 — DROPPED from implementation.**
 - Reason: EC data is single-timepoint per bac (no time series, no day column in old dataset). Cannot fit CE(t)=CE₀·e^(−kt) — k undefined with one point.
